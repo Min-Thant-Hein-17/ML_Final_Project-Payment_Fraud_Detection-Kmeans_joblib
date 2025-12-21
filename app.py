@@ -50,31 +50,42 @@ with col3:
 hour = st.slider("Transaction Hour", 0, 23, 14)
 day = st.selectbox("Day of Week", list(range(7)), format_func=lambda x: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][x])
 
+# --- 4. Prediction Logic ---
 if st.button("✨ Identify Transaction Cluster", type="primary"):
-    # Build input with the exact expected names
-    input_df = pd.DataFrame([{
-        'Purchase_Amount': float(amt),
-        'Customer_Age': float(age),
-        'Footfall_Count': float(foot),
-        'Time_Continuous': float(hour),
-        'Day_of_Week': int(day),
-        'Customer_Loyalty_Tier': loyalty,
-        'Payment_Method': pay,
-        'Product_Category': cat
-    }], columns=EXPECTED_FEATURES)
+    input_df = pd.DataFrame({
+        'Purchase_Amount': [float(amt)],
+        'Customer_Age': [float(age)],
+        'Footfall_Count': [float(foot)],
+        'Time_Continuous': [float(hour)],
+        'Day_of_Week': [day],
+        'Customer_Loyalty_Tier': [loyalty],
+        'Payment_Method': [pay],
+        'Product_Category': [cat]
+    })
 
+    # Ensure column order matches training EXACTLY
+    input_df = input_df[artifact['expected_features']]
+    
     # Predict
-    try:
-        result = int(model.predict(input_df)[0])
-        st.markdown("---")
-        st.success(f"### ✅ Transaction Identified: Cluster {result}")
-        if result == 0:
-            st.info("💡 **Insight:** Typical high-value customer segment.")
-        else:
-            st.warning("⚠️ **Insight:** Behavior aligns with a segment often flagged for review.")
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
-        st.caption("Tip: Clear cache in Streamlit Cloud (Manage app → Clear cache) after updating the model.")
+    cluster_id = artifact['model'].predict(input_df)[0]
 
+    # --- NEW: Cluster Interpretation Mapping ---
+    cluster_map = {
+        0: "Standard High-Value Buyers",
+        1: "Suspicious Late-Night Anomalies",
+        2: "Typical Retail Customers",
+        3: "New Account/High-Velocity Risks",
+        4: "Verified VIP Segment"
+    }
+    persona = cluster_map.get(cluster_id, "Unknown Segment")
+
+    st.markdown("---")
+    st.success(f"### ✅ Result: {persona} (Cluster {cluster_id})")
+    
+    # Recommendation Hook
+    if cluster_id in [1, 3]:
+        st.warning("⚠️ **Action:** Flag for manual security review.")
+    else:
+        st.info("💡 **Action:** Standard processing recommended.")
 
 
