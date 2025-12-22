@@ -7,9 +7,14 @@ st.set_page_config(page_title="Fraud Sentinel", layout="wide")
 
 st.sidebar.title("🛡️ Fraud Sentinel")
 st.sidebar.image("https://talloiresnetwork.tufts.edu/wp-content/uploads//Parami-University-1.png", use_container_width=True)
+
 st.sidebar.markdown("---")
+st.sidebar.subheader("Owner's Information")
 st.sidebar.write("**Name:** Min Thant Hein")
+st.sidebar.write("**ID:** PIUS20230001")
+st.sidebar.write("**Course:** Introduction to Machine Learning")
 st.sidebar.write("**Professor:** Dr. Nwe Nwe Htay Win")
+st.sidebar.markdown("---")
 
 @st.cache_resource
 def load_model():
@@ -61,3 +66,4 @@ if st.button("✨ Identify Cluster", type="primary"):
         res = cluster_map[cluster]
         st.markdown(f"### Result: :{res['color']}[{res['name']} (Cluster {cluster})]")
         st.info(f"💡 **Recommendation:** {res['rec']}")
+
