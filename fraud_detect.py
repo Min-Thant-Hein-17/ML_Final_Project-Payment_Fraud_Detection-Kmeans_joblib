@@ -1,81 +1,61 @@
-
-# train_model.py
+# fraud_detect.py
 import pandas as pd
 import numpy as np
 import pickle
-
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import KNNImputer, SimpleImputer
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.cluster import KMeans
+from imblearn.over_sampling import SMOTE
 
 # --- 1) Load dataset ---
 fd = pd.read_csv("dataset/luxury_cosmetics_fraud_analysis_2025.csv")
 
-# --- 2) Feature engineering ---
-# Time -> continuous hour (H + M/60)
+# --- 2) Feature engineering & IQR Outlier Handling ---
 time_objs = pd.to_datetime(fd['Transaction_Time'], format='%H:%M:%S')
 fd['Time_Continuous'] = time_objs.dt.hour + time_objs.dt.minute / 60.0
-
-# Date -> day-of-week (Mon=0..Sun=6)
 fd['Day_of_Week'] = pd.to_datetime(fd['Transaction_Date']).dt.dayofweek
 
-# --- 3) Drop identifiers / label columns (don’t use labels for clustering) ---
-cols_to_drop = [
-    'Transaction_ID','Customer_ID','Fraud_Flag','IP_Address',
-    'Transaction_Date','Transaction_Time'
-]
-fd_cleaned = fd.drop(columns=[c for c in cols_to_drop if c in fd.columns])
+def cap_outliers_iqr(df, column):
+    Q1 = df[column].quantile(0.25)
+    Q3 = df[column].quantile(0.75)
+    IQR = Q3 - Q1
+    df[column] = np.clip(df[column], Q1 - 1.5 * IQR, Q3 + 1.5 * IQR)
+    return df
 
-# --- 4) Define the ONLY features we will train on (freeze schema) ---
+fd = cap_outliers_iqr(fd, 'Purchase_Amount')
+fd = cap_outliers_iqr(fd, 'Customer_Age')
+
+# --- 3) Preprocessing Pipeline ---
 EXPECTED_FEATURES = [
     'Purchase_Amount', 'Customer_Age', 'Footfall_Count',
     'Time_Continuous', 'Day_of_Week',
     'Customer_Loyalty_Tier', 'Payment_Method', 'Product_Category'
 ]
 
-# Ensure all expected columns exist – if any are missing, create nulls (imputer will handle)
-for col in EXPECTED_FEATURES:
-    if col not in fd_cleaned.columns:
-        fd_cleaned[col] = np.nan
-
-# --- 5) Preprocessors ---
-num_cols = ['Purchase_Amount','Customer_Age','Footfall_Count','Time_Continuous','Day_of_Week']
-cat_cols = ['Customer_Loyalty_Tier','Payment_Method','Product_Category']
-
-num_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-
-cat_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    # IMPORTANT: ignore unseen categories at inference
-    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-])
+num_cols = ['Purchase_Amount', 'Customer_Age', 'Footfall_Count', 'Time_Continuous', 'Day_of_Week']
+cat_cols = ['Customer_Loyalty_Tier', 'Payment_Method', 'Product_Category']
 
 preprocessor = ColumnTransformer(transformers=[
-    ('num', num_transformer, num_cols),
-    ('cat', cat_transformer, cat_cols)
-], remainder='drop')
-
-# --- 6) Model pipeline ---
-kmeans = KMeans(n_clusters=5, random_state=42, n_init='auto')
-model = Pipeline(steps=[
-    ('preprocess', preprocessor),
-    ('cluster_model', kmeans)
+    ('num', Pipeline([('imputer', KNNImputer(n_neighbors=5)), ('scaler', MinMaxScaler())]), num_cols),
+    ('cat', Pipeline([('imputer', SimpleImputer(strategy='most_frequent')), ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))]), cat_cols)
 ])
 
-# Fit
-model.fit(fd_cleaned[EXPECTED_FEATURES])
+# --- 4) Balancing and Modeling ---
+X_processed = preprocessor.fit_transform(fd[EXPECTED_FEATURES])
+y = fd['Fraud_Flag']
 
-# --- 7) Save model together with the expected schema ---
-artifact = {
-    'model': model,
-    'expected_features': EXPECTED_FEATURES
-}
-with open('fraud_detection_model.pkl', 'wb') as f:
+smote = SMOTE(random_state=42)
+X_resampled, _ = smote.fit_resample(X_processed, y)
+
+kmeans = KMeans(n_clusters=4, random_state=42, n_init='auto')
+kmeans.fit(X_resampled)
+
+# --- 5) Save Artifact ---
+model_pipeline = Pipeline([('preprocess', preprocessor), ('cluster_model', kmeans)])
+artifact = {'model': model_pipeline, 'expected_features': EXPECTED_FEATURES}
+
+with open('fraud_detection_Final_model.pkl', 'wb') as f:
     pickle.dump(artifact, f)
-
-print("✅ Trained and saved fraud_detection_model.pkl with expected schema.")
+print("✅ Mastery Model Saved!")
