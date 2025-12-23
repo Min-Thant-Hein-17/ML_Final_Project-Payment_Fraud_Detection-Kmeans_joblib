@@ -8,10 +8,12 @@ st.set_page_config(page_title="Fraud Sentinel", layout="wide")
 st.sidebar.title("🛡️ Fraud Sentinel")
 st.sidebar.image("https://talloiresnetwork.tufts.edu/wp-content/uploads//Parami-University-1.png", use_container_width=True)
 st.sidebar.markdown("---")
-st.sidebar.subheader("Project Details")
-st.sidebar.write("**Student:** Min Thant Hein")
-st.sidebar.write("**K-Value:** 4 (Optimized via Elbow & Silhouette)")
-st.sidebar.write("**Method:** KMeans + MinMaxScaler + SMOTE")
+st.sidebar.subheader("Owner's Information")
+st.sidebar.write("**Name:** Min Thant Hein")
+st.sidebar.write("**ID:** PIUS20230001")
+st.sidebar.write("**Course:** Introduction to Machine Learning")
+st.sidebar.write("**Professor:** Dr. Nwe Nwe Htay Win")
+st.sidebar.markdown("---")
 
 # --- MAIN UI ---
 st.title("🛡️ Luxury Cosmetics Fraud Detection")
@@ -102,3 +104,4 @@ if st.button("✨ Analyze Transaction", type="primary"):
     st.markdown(f"### Result: :{res['color']}[{res['name']} (Cluster {cluster})]")
     st.write(f"**Calculated Risk Level:** {res['risk']}")
     st.info(res['rec'])
+
