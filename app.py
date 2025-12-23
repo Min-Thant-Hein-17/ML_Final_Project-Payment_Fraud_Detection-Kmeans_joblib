@@ -16,6 +16,22 @@ st.sidebar.write("**Course:** Introduction to Machine Learning")
 st.sidebar.write("**Professor:** Dr. Nwe Nwe Htay Win")
 st.sidebar.markdown("---")
 
+# --- NEW SECTION: DOS AND DON'TS (USER GUIDE) ---
+with st.expander("ℹ️ User Guide: Dos and Don'ts for Fraud Detection"):
+    col_do, col_dont = st.columns(2)
+    with col_do:
+        st.success("### ✅ Dos")
+        st.write("- **Check High-Value Clusters:** Prioritize manual reviews for Cluster 1.")
+        st.write("- **Verify Night Transactions:** Use the slider to check risk at late hours.")
+        st.write("- **Validate VIPs:** Reward loyal customers in Cluster 3 with fast-track shipping.")
+    with col_dont:
+        st.error("### ❌ Don'ts")
+        st.write("- **Ignore Age Alerts:** Never approve transactions with impossible ages.")
+        st.write("- **Blindly Trust 0:** Even 'Standard' clusters need periodic audit.")
+        st.write("- **Input Raw Data:** Ensure currency is converted to USD before entry.")
+
+st.markdown("---")
+
 @st.cache_resource
 def load_model():
     with open("fraud_detection_Final_model.pkl", "rb") as f:
@@ -66,4 +82,5 @@ if st.button("✨ Identify Cluster", type="primary"):
         res = cluster_map[cluster]
         st.markdown(f"### Result: :{res['color']}[{res['name']} (Cluster {cluster})]")
         st.info(f"💡 **Recommendation:** {res['rec']}")
+
 
